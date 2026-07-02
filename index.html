@@ -331,7 +331,11 @@
           
         </select>
       </div>
-      <div class="key-note">🔒 <span><b>Your key stays in this browser tab only</b> — sent directly to integrate.api.nvidia.com, never stored or logged.</span></div>
+      <div class="full">
+        <label class="field-label">Proxy URL (optional)</label>
+        <input type="text" id="proxyUrl" placeholder="https://your-proxy.example.com/chat" autocomplete="off">
+      </div>
+      <div class="key-note">🔒 <span><b>Your key stays in this browser tab only</b> — sent directly to integrate.api.nvidia.com or through your proxy, never stored or logged.</span></div>
     </div>
   </header>
 
@@ -362,6 +366,7 @@
   const settingsBtn = $('settingsBtn'), settings = $('settings');
   const apiKey = $('apiKey'), modelSel = $('model'), modelTag = $('modelTag');
   const log = $('log'), emptyState = $('emptyState');
+  const proxyUrl = $('proxyUrl');
   const input = $('input'), sendBtn = $('sendBtn'), clearBtn = $('clearBtn');
   const statusDot = $('statusDot');
 
@@ -461,6 +466,8 @@
       return;
     }
 
+    const endpoint = proxyUrl.value.trim() || 'https://integrate.api.nvidia.com/v1/chat/completions';
+
     input.value = '';
     input.style.height = 'auto';
     messages.push({role:'user', content:text});
@@ -472,7 +479,7 @@
     const placeholder = addMessage('assistant', '', true);
 
     try{
-      const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      const res = await fetch(endpoint, {
         method:'POST',
         headers:{
           'Content-Type':'application/json',
@@ -502,7 +509,11 @@
       setStatus('on');
 
     } catch(err){
-      placeholder.querySelector('.bubble').innerHTML = `<span style="color:var(--err)">Request failed — ${escapeHtml(err.message || 'unknown error')}</span>`;
+      const corsMessage = /(cors|failed to fetch|preflight|network error)/i.test(err.message || '');
+      const errorText = corsMessage
+        ? 'Request blocked by browser CORS. Use a server-side proxy URL or deploy this app behind a backend.'
+        : `Request failed — ${escapeHtml(err.message || 'unknown error')}`;
+      placeholder.querySelector('.bubble').innerHTML = `<span style="color:var(--err)">${errorText}</span>`;
       setStatus('');
     } finally {
       busy = false;
